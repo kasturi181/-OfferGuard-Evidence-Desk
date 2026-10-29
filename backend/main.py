@@ -16,7 +16,13 @@ origins = [
     "http://127.0.0.1:5173",
 ]
 
-app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 MAX_CHARS = 20000
 
