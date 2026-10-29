@@ -1,0 +1,61 @@
+const BASE = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
+
+async function post(path, init, ms = 15000) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), ms);
+  try {
+    const r = await fetch(BASE + path, { ...init, signal: ctl.signal });
+    if (!r.ok) {
+      let msg = `Server error ${r.status}`;
+      try { msg = (await r.json()).detail || msg; } catch {}
+      const e = new Error(msg); e.userFacing = true; throw e;
+    }
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+
+// Small local fallback: same idea as backend rules, only 4 rules. Clearly labelled.
+function localAnalyze(text) {
+  const rules = [
+    ["RULE-01", "strong", "Upfront payment request", /(?:pay|deposit|transfer|send)[^.\n]{0,60}?(?:registration|processing|security|joining|training|refundable)[^.\n]{0,25}?(?:fee|fees|charges?|deposit)|(?:registration|processing|security|joining|refundable)\s+(?:fee|fees|charges?)[^.\n]{0,40}/i, "Do not pay until verified."],
+    ["RULE-02", "strong", "Credential / OTP request", /(?:share|send|provide|give|enter)[^.\n]{0,40}\b(?:otp|password|pin|cvv)\b[^.\n]{0,20}/i, "Never share credentials."],
+    ["RULE-07", "medium", "Guaranteed selection or pressure", /(?:guaranteed (?:job|selection)|100%\s*selection|last chance|today only|act now)[^.\n]{0,30}/i, "Take time. Verify first."],
+    ["RULE-09", "weak", "Redirect to messaging app / form", /(?:telegram|whatsapp)[^.\n]{0,50}/i, "Prefer official portal."],
+  ];
+  const findings = [];
+  for (const [id, sev, title, re, action] of rules) {
+    const m = re.exec(text);
+    if (m) findings.push({ rule_id: id, severity: sev, title, claim: title, evidence: m[0].trim(), start: m.index, end: m.index + m[0].length, source: "User-provided message (local fallback rules)", why: "Matched a deterministic local rule.", status: "matched_rule", uncertainty: "Text observation only.", action });
+  }
+  const c = { strong: 0, medium: 0, weak: 0, info: 0 };
+  findings.forEach((f) => c[f.severity]++);
+  const level = c.strong ? "high" : c.medium >= 2 ? "elevated" : findings.length ? "some" : "none";
+  const now = new Date().toISOString();
+  return {
+    mode: "local_fallback",
+    extracted_fields: {},
+    findings,
+    checks: ["url_reputation", "company_identity"].map((n) => ({ name: n, status: "not_checked", source: "-", checked_at: now, details: "Backend unreachable. Check NOT performed." })),
+    assessment: { level, counts: c, summary: "Backend unreachable. Only 4 local rules ran. NOT proof of safety.", note: "Rule-count indicator. Not a fraud probability." },
+    missing_checks: ["Backend analysis, URL reputation and company checks were NOT performed."],
+    limitations: ["Local fallback runs a reduced rule set. The Python backend did not run."],
+  };
+}
+
+export async function analyze(text, { simulateFailure = false } = {}) {
+  try {
+    return await post("/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, simulate_url_failure: simulateFailure }) });
+  } catch (e) {
+    if (e.userFacing) throw e;
+    return localAnalyze(text);
+  }
+}
+
+export async function analyzePdf(file) {
+  const fd = new FormData(); fd.append("file", file);
+  try { return await post("/analyze-pdf", { method: "POST", body: fd }, 30000); }
+  catch (e) {
+    if (e.userFacing) throw e;
+    throw new Error("Backend unreachable. PDF analysis needs the backend. Paste the text instead.");
+  }
+}

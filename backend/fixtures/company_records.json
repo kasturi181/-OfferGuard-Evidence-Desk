@@ -1,0 +1,5 @@
+{"_note": "Synthetic demo data. Not an authoritative registry.",
+ "records": [
+  {"name": "Northwind Tech Pvt Ltd", "official_domains": ["northwindtech.example"]},
+  {"name": "Contoso Analytics Limited", "official_domains": ["contosoanalytics.example"]}
+ ]}
