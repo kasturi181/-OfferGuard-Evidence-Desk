@@ -4,6 +4,7 @@ import HighlightedText from "./HighlightedText.jsx";
 import Explain from "./Explain.jsx";
 import Drafts from "./Drafts.jsx";
 import Checklist from "./Checklist.jsx";
+import VerifyLinks from "./VerifyLinks.jsx";
 
 const NAMES = {
   url_reputation: "URL reputation", company_identity: "Company exists in dataset", email_domain_consistency: "Recruiter email domain",
@@ -63,6 +64,8 @@ export default function EvidenceLedger({ r }) {
         );
       })}
       {r.checks.some((c) => c.name === "url_reputation" && c.status !== "not_checked") && <small className="muted">URL advisory data: Google Safe Browsing. Potential risk only.</small>}
+
+      <VerifyLinks fields={f} />
 
       {chips.length > 0 && (
         <section>
