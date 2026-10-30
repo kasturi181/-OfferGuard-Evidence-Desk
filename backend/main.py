@@ -1,14 +1,13 @@
 import os
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-import auth
 import db
-import learn
 from checks.community import check_community
 from checks.company_identity import check_company
 from checks.url_reputation import check_urls
+from checks.live import check_live, check_cin, check_patterns
 from extract import extract_fields, pdf_to_text
 from benchmark import run_benchmark
 from drafts import build_drafts
@@ -30,7 +29,7 @@ app.add_middleware(
 MAX_CHARS = 20000
 
 
-async def analyze_text(text: str, simulate: bool = False, request: Request | None = None) -> dict:
+async def analyze_text(text: str, simulate: bool = False) -> dict:
     text = text.strip()
     if not text:
         raise HTTPException(422, "Empty input.")
@@ -38,17 +37,15 @@ async def analyze_text(text: str, simulate: bool = False, request: Request | Non
         raise HTTPException(413, f"Input too long (max {MAX_CHARS} chars).")
     fields = extract_fields(text)
     companies, source = await db.load_companies()
-    checks = [await check_urls(fields["urls"], simulate), *check_company(text, fields, companies, source), await check_community(fields)]
+    checks = [await check_urls(fields["urls"], simulate), *check_company(text, fields, companies, source), await check_community(fields),
+              check_patterns(fields, text), *check_cin(text, fields), *(await check_live(fields, text))]
     findings = run_rules(text, fields, checks)
     missing = [f"{c['name']}: {c['details']}" for c in checks if c["status"] in ("not_checked", "unavailable")]
     assessment = assess(findings)
     report = Report(extracted_fields=fields, findings=findings, checks=checks, assessment=assessment, missing_checks=missing,
                     limitations=LIMITS, checklist=build_checklist(findings), analyzed_text=text,
                     explain=build_explanation(findings, assessment), drafts=build_drafts(text, fields, findings, companies)).model_dump()
-    user = await auth.current_user(request)
-    await db.save_report_meta(report["assessment"]["level"], [f["rule_id"] for f in findings], fields["company"], user["id"] if user else None)
-    if report["assessment"]["level"] == "high":  # learn recruiter details from strong scams so the next victim sees a match
-        await db.insert_auto_signals(learn.signals_from(fields, findings, companies), auth.client_id(request, user))
+    await db.save_report_meta(report["assessment"]["level"], [f["rule_id"] for f in findings], fields["company"])
     return report
 
 
@@ -59,16 +56,16 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy", "database": db.enabled(), "login_required_for_reports": auth.login_required_for_reports()}
+    return {"status": "healthy", "database": db.enabled()}
 
 
 @app.post("/analyze")
-async def analyze(body: AnalyzeIn, request: Request):
-    return await analyze_text(body.text, body.simulate_url_failure, request)
+async def analyze(body: AnalyzeIn):
+    return await analyze_text(body.text, body.simulate_url_failure)
 
 
 @app.post("/analyze-pdf")
-async def analyze_pdf(request: Request, file: UploadFile = File(...)):
+async def analyze_pdf(file: UploadFile = File(...)):
     data = await file.read()
     if len(data) > 5_000_000:
         raise HTTPException(413, "PDF too large (max 5MB).")
@@ -78,34 +75,16 @@ async def analyze_pdf(request: Request, file: UploadFile = File(...)):
         raise HTTPException(422, "Could not read PDF.")
     if len(text) < 20:
         raise HTTPException(422, "No extractable text. Scanned PDFs are not supported (no OCR). Paste the text instead.")
-    return await analyze_text(text, False, request)
+    return await analyze_text(text)
 
 
 @app.post("/report")
-async def report_scam(body: ReportIn, request: Request):
+async def report_scam(body: ReportIn):
     if not db.enabled():
         raise HTTPException(503, "Reporting is not enabled (database not configured).")
-    user = await auth.current_user(request)
-    if auth.login_required_for_reports() and not user:
-        raise HTTPException(401, "Please sign in to submit a report. Signing in keeps false and spam reports out.")
-    who = auth.client_id(request, user)
-    if not auth.rate_ok(who):
-        raise HTTPException(429, "Too many reports from you in the last hour. Please try again later.")
-    if not await db.insert_scam_report(body.kind, body.value, body.description, "user", who):
+    if not await db.insert_scam_report(body.kind, body.value, body.description):
         raise HTTPException(502, "Could not save the report. Try again.")
     return {"saved": True, "message": "Thanks. Your report is stored as unverified."}
-
-
-@app.get("/my-history")
-async def my_history(request: Request):
-    user = await auth.current_user(request)
-    if not user:
-        raise HTTPException(401, "Sign in to see your past checks.")
-    try:
-        rows = await db.list_reports(20, user["id"])
-    except Exception:  # noqa: BLE001
-        raise HTTPException(502, "Could not load your history. Has supabase_update.sql been run?")
-    return {"email": user["email"], "items": rows or []}
 
 
 @app.get("/benchmark")

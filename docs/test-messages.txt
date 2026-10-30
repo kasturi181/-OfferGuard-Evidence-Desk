@@ -1,0 +1,25 @@
+OFFERGUARD TEST MESSAGES (fictional companies and numbers)
+Paste each one into the box and click Analyze.
+
+1) SUSPICIOUS: fee + personal email
+Hello, we at Contoso Analytics Limited are hiring freshers. Your selection is confirmed. Pay a refundable registration fee of ₹2,000 today to secure your seat. Contact HR: contoso.hr@gmail.com. Join our Telegram group for updates.
+Expected: RULE-01 (strong), RULE-05, RULE-07, RULE-09, RULE-04
+
+2) REAL COMPANY, LOOK-ALIKE DOMAIN
+Offer letter from Northwind Tech Pvt Ltd (CIN U11111MH2000PTC000001). Location: Pune. Please send your Aadhaar card and bank details within 24 hours. Apply at https://northwind-careers.com/apply. Reply to hr@northwind-careers.com.
+Expected: RULE-04, 06, 07, 11, 12, 13
+
+3) BENIGN-LOOKING
+Hi, thanks for applying to Northwind Tech Pvt Ltd (CIN U72900KA2015PTC123456), Bengaluru. Interview is Monday 10am. Details from hr@northwindtech.example.
+Expected: no warning signals (still not proof the offer is genuine)
+
+4) MALICIOUS URL TEST (needs the Safe Browsing key to show RULE-03)
+Apply here: http://testsafebrowsing.appspot.com/s/malware.html and share your OTP to confirm.
+Expected: RULE-02 always. RULE-03 only if the key is set. Otherwise the URL check says "not checked".
+
+5) NEGATION (should NOT flag a fee)
+There is no registration fee or any charge at any stage of our hiring process.
+Expected: no RULE-01
+
+PDF TEST: upload sample_offer.pdf (text-based, fictional).
+SCREENSHOT TEST: screenshot any of the messages above and use "Upload screenshot".

@@ -14,9 +14,9 @@ REDIRECT = re.compile(r"(?:telegram|whatsapp)[^.\n]{0,50}|(?:wa\.me|t\.me|forms\
 LIMITS = [
     "Warning signals are not proof of fraud. Absence of signals is not proof of safety.",
     "A company-record match shows an entity may exist; it does not prove the recruiter is authorized.",
-    "Company records come from a small synthetic sample dataset, not an official registry.",
-    "Scanned PDFs are not read directly. Upload a screenshot of the page or paste the text instead.",
-    "Community signals come from unverified user reports and earlier high-risk checks. They can be wrong or malicious.",
+    "Company records come from a small synthetic sample dataset, not an official registry. MCA has no public API, so CIN is decoded from its format only.",
+    "Live lookups (domain age, DNS, redirects) can fail or be hidden by the registry; failures are shown as not checked.",
+    "Scanned/image PDFs are not supported (no OCR).",
 ]
 
 
@@ -61,9 +61,30 @@ def run_rules(text: str, fields: dict, checks: list[dict], consistency: list[dic
         out.append(from_check("RULE-13", "weak", "Location differs from the record", "The offer mentions a city different from the recorded head office.", c,
                               "A weak signal on its own.", "Ask where the job is based and confirm on the official website.", "Companies often have several offices."))
     if (c := chk("community_reports")) and c["status"] == "warning":
-        out.append(from_check("RULE-14", "medium" if c.get("count", 0) >= 3 else "weak", "Matches reports from other users", "Some details match reports or earlier high-risk checks from other people.", c,
+        out.append(from_check("RULE-14", "weak", "Matches user-submitted reports", "Some details match reports submitted by other users.", c,
                               "Independent reports are a reason to verify more carefully.", "Verify through official channels before proceeding.",
                               "Reports are unverified and could be mistaken or malicious."))
+    if (c := chk("domain_age")) and c["status"] == "warning":
+        days = c.get("min_age_days", 999)
+        out.append(from_check("RULE-15", "strong" if days < 30 else "medium", "Very new domain", "A link or recruiter email uses a domain registered only recently.", c,
+                              "Scam sites are usually set up days or weeks before use. Real hiring companies rarely recruit from brand-new domains.",
+                              "Ask for an email from the company's long-standing official domain.", "New companies and rebrands also have new domains. Registry dates can be hidden or wrong."))
+    if (c := chk("dns_mail_records")) and c["status"] == "warning":
+        out.append(from_check("RULE-16", "medium", "Domain has no website or mail server", "A domain in the message does not resolve, or cannot receive email.", c,
+                              "A real recruiter needs a reachable website and mail. Missing records suggest a throwaway domain.", "Do not reply to that address. Find the company's official site yourself.",
+                              "DNS can be temporarily misconfigured."))
+    if (c := chk("link_redirects")) and c["status"] == "warning":
+        out.append(from_check("RULE-17", "medium", "Link redirects to a different site", "Opening a link in the message sends you to another website.", c,
+                              "Hidden redirects are used to land victims on look-alike pages.", "Do not open the link. Go to the official careers page yourself.",
+                              "Login and tracking redirects are sometimes harmless."))
+    if (c := chk("domain_patterns")) and c["status"] == "warning":
+        out.append(from_check("RULE-18", "medium", "Suspicious domain pattern", "A domain looks like an imitation, a free site-builder page or a shortened link.", c,
+                              "Look-alike and free-hosted domains are common in recruitment scams.", "Compare the domain letter by letter with the company's real website.",
+                              "Some real firms use free hosts or hyphenated domains."))
+    if (c := chk("cin_decode")) and c["status"] == "warning":
+        out.append(from_check("RULE-19", "medium", "Registration number looks wrong", "The CIN in the message is malformed or contradicts the company's own claims.", c,
+                              "A CIN encodes listing status, state, year and company type. Invented numbers often break these rules.", "Search the CIN on the MCA portal and compare name and incorporation date.",
+                              "A typo in copying the CIN is possible."))
     comp = fields.get("company")
     for e in fields["recruiter_emails"]:
         dom = e.split("@")[-1].lower()

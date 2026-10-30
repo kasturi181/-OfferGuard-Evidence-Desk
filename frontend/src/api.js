@@ -1,14 +1,10 @@
-import { getToken } from "./auth.js";
-
 const BASE = (import.meta.env.VITE_API_BASE_URL || "https://offerguard-api-20f2.onrender.com").replace(/\/+$/, "");
 
 async function request(path, init, ms = 60000) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), ms);
   try {
-    const token = await getToken();  // null when signed out or sign-in is not configured
-    const headers = { ...(init && init.headers), ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-    const r = await fetch(BASE + path, { ...init, headers, signal: ctl.signal });
+    const r = await fetch(BASE + path, { ...init, signal: ctl.signal });
     if (!r.ok) {
       let msg = `Server error ${r.status} at ${BASE + path}`;
       try { const d = (await r.json()).detail; if (d) msg = typeof d === "string" ? d : JSON.stringify(d); } catch {}
@@ -64,8 +60,6 @@ export async function analyzePdf(file) {
 
 export const getBenchmark = () => request("/benchmark", {}, 60000);
 
-export const getHistory = () => request("/my-history", {}, 30000);
-
 export const getStats = () => request("/stats", {}, 30000);
 
 export const submitReport = (payload) =>
@@ -84,3 +78,5 @@ export async function ocrImage(file, onProgress) {
     await worker.terminate();
   }
 }
+
+export const getHealth = () => request("/health", {}, 20000);

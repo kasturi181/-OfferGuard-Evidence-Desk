@@ -33,8 +33,13 @@ export default function AnalyzeView() {
   return (
     <>
       <section className="hero">
-        <h1>Check a job offer</h1>
-        <p className="muted">Paste a recruitment message, upload a text PDF, or upload a screenshot of the chat. You get evidence-linked warning signals, what could not be verified, and what to do next. Not a verdict.</p>
+        <h1>Is this job offer real? <span className="grad">Check the evidence.</span></h1>
+        <p className="muted">Paste the message, a text PDF or a chat screenshot. OfferGuard looks up the domains live, decodes the company's registration number, and shows the exact words behind every warning. It never says "safe".</p>
+        <div className="why">
+          <div><b>🔎 Live lookups</b><span>Domain age, DNS and mail servers, where links really lead. Facts a chatbot cannot see.</span></div>
+          <div><b>🧾 Every claim is traceable</b><span>Fixed rules, same answer every time, each one points at your exact words. No guessing.</span></div>
+          <div><b>🔒 Private</b><span>No account. Offer text is not stored. Screenshots are read on your device.</span></div>
+        </div>
       </section>
       <section className="card input">
         <div className="chips">{demoCases.map((d) => <button key={d.label} className="chip" onClick={() => setText(d.text)}>{d.label}</button>)}</div>
@@ -46,7 +51,7 @@ export default function AnalyzeView() {
           <label className="check-l"><input type="checkbox" checked={sim} onChange={(e) => setSim(e.target.checked)} /> Simulate URL check failure</label>
         </div>
         {note && <p className="banner info">{note}</p>}
-        {busy && <p className="muted">First request can take up to a minute while the free server wakes up.</p>}
+        {busy && <p className="muted">Running live lookups (domain age, DNS, redirects). Takes 5–15 seconds. The first request can take up to a minute while the free server wakes up.</p>}
       </section>
       {err && <p className="banner err">{err}</p>}
       {report && <EvidenceLedger r={report} />}
