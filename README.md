@@ -55,6 +55,10 @@ OfferGuard turns one message or PDF into one traceable report. No black-box scor
 | 8 | Implausible salary for an entry-level role | Medium |
 | 9 | Redirect to Telegram / WhatsApp / external form | Weak |
 | 10 | Company or recruiter not independently verified | Info |
+| 11 | Link in offer points away from the company's official domain | Medium |
+| 12 | Registration ID (CIN) differs from the record | Medium |
+| 13 | Offer location differs from the recorded office | Weak |
+| 14 | Details match unverified user reports | Weak |
 
 - **Evidence ledger**: claim, exact matched text with character offsets, source, check status, why it matters, uncertainty, next action.
 - **Live URL reputation** with Google Safe Browsing (optional key). "No known match" is never shown as "safe".
@@ -62,7 +66,11 @@ OfferGuard turns one message or PDF into one traceable report. No black-box scor
 - **Honest failure handling**: unavailable checks are listed under "Not checked". A "Simulate URL check failure" toggle demonstrates this.
 - **Local fallback**: if the backend is unreachable, the frontend runs a reduced rule set and labels it clearly.
 - **Transparent risk indicator**: rule-count level (high / elevated / some / none). Not a fraud probability.
-- **Optional history** saved to Supabase when configured.
+- **Cross-source consistency**: email domain, link domains, CIN and location are each compared with the company record and explained individually.
+- **Tailored safety checklist**: next steps matched to the signals found (cybercrime.gov.in, 1930, MCA lookup).
+- **Evidence highlighted inside your original message.**
+- **Dashboard** (aggregate stats, no offer text stored) and **Report a scam** (unverified, masked user reports) backed by Supabase.
+- **Curated company list** in the Supabase `companies` table, with a local fixture fallback.
 
 ## Screenshots
 [EDIT: add images. Put files in a `docs/` folder, then use:]
@@ -129,7 +137,9 @@ offerguard/
 | GET | `/health` | `{"status":"healthy"}` |
 | POST | `/analyze` | body `{"text": "...", "simulate_url_failure": false}` returns a report |
 | POST | `/analyze-pdf` | multipart field `file` (text PDF, max 5 MB) |
-| GET | `/history` | saved reports if Supabase is configured |
+| POST | `/report` | submit an unverified scam report `{kind, value, description}` |
+| GET | `/stats` | dashboard aggregates |
+| GET | `/history` | saved analysis metadata if Supabase is configured |
 
 Report keys: `extracted_fields`, `findings`, `checks`, `assessment`, `missing_checks`, `limitations`, `mode`.
 Check statuses: `verified_match`, `warning`, `no_match`, `unavailable`, `not_checked`.

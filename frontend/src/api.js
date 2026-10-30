@@ -1,20 +1,20 @@
 const BASE = (import.meta.env.VITE_API_BASE_URL || "https://offerguard-api-20f2.onrender.com").replace(/\/+$/, "");
 
-async function post(path, init, ms = 60000) {
+async function request(path, init, ms = 60000) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), ms);
   try {
     const r = await fetch(BASE + path, { ...init, signal: ctl.signal });
     if (!r.ok) {
       let msg = `Server error ${r.status} at ${BASE + path}`;
-      try { const d = (await r.json()).detail; if (d) msg = `${d} (${BASE + path})`; } catch {}
+      try { const d = (await r.json()).detail; if (d) msg = typeof d === "string" ? d : JSON.stringify(d); } catch {}
       const e = new Error(msg); e.userFacing = true; throw e;
     }
     return await r.json();
   } finally { clearTimeout(t); }
 }
 
-// Small local fallback: same idea as backend rules, only 4 rules. Clearly labelled.
+// Reduced local fallback (4 rules). Clearly labelled; never claims the backend ran.
 function localAnalyze(text, reason = "") {
   const rules = [
     ["RULE-01", "strong", "Upfront payment request", /(?:pay|deposit|transfer|send)[^.\n]{0,60}?(?:registration|processing|security|joining|training|refundable)[^.\n]{0,25}?(?:fee|fees|charges?|deposit)|(?:registration|processing|security|joining|refundable)\s+(?:fee|fees|charges?)[^.\n]{0,40}/i, "Do not pay until verified."],
@@ -32,10 +32,7 @@ function localAnalyze(text, reason = "") {
   const level = c.strong ? "high" : c.medium >= 2 ? "elevated" : findings.length ? "some" : "none";
   const now = new Date().toISOString();
   return {
-    mode: "local_fallback",
-    fallback_reason: reason,
-    extracted_fields: {},
-    findings,
+    mode: "local_fallback", fallback_reason: reason, analyzed_text: text, extracted_fields: {}, findings, checklist: [],
     checks: ["url_reputation", "company_identity"].map((n) => ({ name: n, status: "not_checked", source: "-", checked_at: now, details: "Backend unreachable. Check NOT performed." })),
     assessment: { level, counts: c, summary: "Backend unreachable. Only 4 local rules ran. NOT proof of safety.", note: "Rule-count indicator. Not a fraud probability." },
     missing_checks: ["Backend analysis, URL reputation and company checks were NOT performed."],
@@ -45,7 +42,7 @@ function localAnalyze(text, reason = "") {
 
 export async function analyze(text, { simulateFailure = false } = {}) {
   try {
-    return await post("/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, simulate_url_failure: simulateFailure }) });
+    return await request("/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, simulate_url_failure: simulateFailure }) });
   } catch (e) {
     if (e.userFacing) throw e;
     return localAnalyze(text, `${e.name}: ${e.message} | calling ${BASE}/analyze`);
@@ -54,9 +51,14 @@ export async function analyze(text, { simulateFailure = false } = {}) {
 
 export async function analyzePdf(file) {
   const fd = new FormData(); fd.append("file", file);
-  try { return await post("/analyze-pdf", { method: "POST", body: fd }, 60000); }
+  try { return await request("/analyze-pdf", { method: "POST", body: fd }); }
   catch (e) {
     if (e.userFacing) throw e;
-    throw new Error(`Backend unreachable. PDF analysis needs the backend. Paste the text instead. (${e.name}: ${e.message} | calling ${BASE}/analyze-pdf)`);
+    throw new Error(`Backend unreachable. PDF analysis needs the backend. Paste the text instead. (${e.name}: ${e.message})`);
   }
 }
+
+export const getStats = () => request("/stats", {}, 30000);
+
+export const submitReport = (payload) =>
+  request("/report", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
