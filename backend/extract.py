@@ -22,6 +22,20 @@ CITY_ALIASES = {"bengaluru": "bengaluru", "bangalore": "bengaluru", "mumbai": "m
                 "gurgaon": "gurugram", "noida": "noida", "hyderabad": "hyderabad", "chennai": "chennai", "pune": "pune",
                 "kolkata": "kolkata", "ahmedabad": "ahmedabad", "jaipur": "jaipur", "kochi": "kochi", "indore": "indore"}
 CITY_RE = re.compile(r"\b(" + "|".join(CITY_ALIASES) + r")\b", re.I)
+_MON = r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?"
+START = re.compile(
+    r"(?:join(?:ing)?|start(?:ing)?|report(?:ing)?|commenc\w*)(?:\s+date)?\s*(?:on|by|from|before|is|:|-)?\s*[:\-]?\s*"
+    r"(\d{1,2}(?:st|nd|rd|th)?[\s\-/]+" + _MON + r"(?:[\s,\-/]+\d{2,4})?"
+    r"|" + _MON + r"\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?"
+    r"|\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4}"
+    r"|immediately|asap|next (?:week|month|monday)|tomorrow|today)", re.I)
+ROLE = [
+    re.compile(r"(?:position|role|designation|post|job title)\s*(?:of|is|:|-)\s*([A-Za-z][A-Za-z /&+\-]{2,40}?)(?=[.,;\n(]|\s+(?:at|in|with|for|from|on)\b|$)", re.I),
+    re.compile(r"(?:hiring|selected|appointed|shortlisted)\s+(?:for|as)\s+(?:a|an|the)?\s*([A-Za-z][A-Za-z /&+\-]{2,40}?)(?=[.,;\n(]|\s+(?:at|in|with|for|from|on)\b|$)", re.I),
+]
+MODE = re.compile(r"\b(work from home|wfh|remote|hybrid|on-?site|work from office|wfo)\b", re.I)
+MODE_NAMES = {"work from home": "Work from home", "wfh": "Work from home", "remote": "Remote", "hybrid": "Hybrid",
+              "onsite": "On-site", "on-site": "On-site", "work from office": "On-site", "wfo": "On-site"}
 FEE_CONTEXT = re.compile(r"fee|fees|deposit|charges?|refundable|registration", re.I)
 
 
@@ -46,8 +60,19 @@ def monthly_inr(amount: float, unit: str | None, period: str | None) -> float:
     return amount
 
 
+def _role(text: str):
+    for rx in ROLE:
+        m = rx.search(text)
+        if m:
+            r = re.sub(r"\s+", " ", m.group(1)).strip(" -/&+")
+            if 2 < len(r) <= 40:
+                return r
+    return None
+
+
 def extract_fields(text: str) -> dict:
     company = COMPANY.search(text)
+    start, mode = START.search(text), MODE.search(text)
     salaries = []
     for m in SALARY.finditer(text):
         before = text[max(0, m.start() - 30):m.start()]
@@ -70,6 +95,9 @@ def extract_fields(text: str) -> dict:
         "registration_ids": list(dict.fromkeys(c.upper() for c in CIN.findall(text))),
         "phones": list(dict.fromkeys(PHONE.findall(text))),
         "cities": list(dict.fromkeys(CITY_ALIASES[c.lower()] for c in CITY_RE.findall(text))),
+        "role": _role(text),
+        "start_date": re.sub(r"\s+", " ", start.group(1)).strip() if start else None,
+        "work_mode": MODE_NAMES.get(mode.group(1).lower().replace(" ", " ")) if mode else None,
     }
 
 

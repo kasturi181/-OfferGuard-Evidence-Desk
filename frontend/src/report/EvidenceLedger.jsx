@@ -5,14 +5,15 @@ import Explain from "./Explain.jsx";
 import Drafts from "./Drafts.jsx";
 import Checklist from "./Checklist.jsx";
 import VerifyLinks from "./VerifyLinks.jsx";
+import OfferBrief from "./OfferBrief.jsx";
+import DomainIntel from "./DomainIntel.jsx";
+import AuditTrail from "./AuditTrail.jsx";
 
 const NAMES = {
   url_reputation: "URL reputation", company_identity: "Company exists in dataset", email_domain_consistency: "Recruiter email domain",
   link_domain_consistency: "Links vs official domain", registration_id_consistency: "Registration ID (CIN)", location_consistency: "Location", community_reports: "User reports",
-  domain_age: "Domain age", dns_mail_records: "Website & mail server", link_redirects: "Where the link really goes", domain_patterns: "Domain look-alike patterns", cin_decode: "CIN decoded (MCA format)",
 };
-const LIVE = ["domain_age", "dns_mail_records", "link_redirects", "domain_patterns", "cin_decode"];
-const LABEL = { verified_match: "matched", warning: "mismatch", no_match: "nothing suspicious", unavailable: "unavailable", not_checked: "not checked" };
+const LABEL = { verified_match: "matched", warning: "mismatch", no_match: "no known match", unavailable: "unavailable", not_checked: "not checked" };
 
 export default function EvidenceLedger({ r }) {
   const f = r.extracted_fields || {};
@@ -26,6 +27,7 @@ export default function EvidenceLedger({ r }) {
       {r.mode === "local_fallback" && (
         <p className="banner warn">Backend unreachable — showing reduced local analysis.<br /><small>{r.fallback_reason}</small></p>
       )}
+      <OfferBrief brief={r.brief} />
       <RiskMeter a={r.assessment} />
       <div className="noprint right"><button className="btn small" onClick={() => window.print()}>Save report as PDF</button></div>
       <Explain data={r.explain} />
@@ -36,6 +38,8 @@ export default function EvidenceLedger({ r }) {
       </section>
 
       <Checklist items={r.checklist} />
+      <DomainIntel intel={r.intel} />
+      <VerifyLinks fields={f} />
       <Drafts items={r.drafts} />
 
       <section>
@@ -44,28 +48,19 @@ export default function EvidenceLedger({ r }) {
         {r.findings.map((x) => <FindingCard key={x.rule_id} f={x} />)}
       </section>
 
-      {[["Live lookups run just now", (c) => LIVE.includes(c.name), "These were fetched live from public registries and DNS for this exact message. A search engine or chatbot cannot do this for you."], ["Cross-source checks", (c) => !LIVE.includes(c.name), ""]].map(([title, test, hint]) => {
-        const list = r.checks.filter(test);
-        if (!list.length) return null;
-        return (
-          <section key={title}>
-            <h3>{title}</h3>
-            {hint && <p className="muted">{hint}</p>}
-            <div className="grid">
-              {list.map((c) => (
-                <article key={c.name} className={`card check${LIVE.includes(c.name) ? " live" : ""}`}>
-                  <header><b>{NAMES[c.name] || c.name}</b><span className={`pill st-${c.status}`}>{LABEL[c.status] || c.status}</span></header>
-                  <p>{c.details}</p>
-                  <small className="muted">{c.source} · {c.checked_at.replace("T", " ").slice(0, 19)} UTC</small>
-                </article>
-              ))}
-            </div>
-          </section>
-        );
-      })}
-      {r.checks.some((c) => c.name === "url_reputation" && c.status !== "not_checked") && <small className="muted">URL advisory data: Google Safe Browsing. Potential risk only.</small>}
-
-      <VerifyLinks fields={f} />
+      <section>
+        <h3>Cross-source checks</h3>
+        <div className="grid">
+          {r.checks.map((c) => (
+            <article key={c.name} className="card check">
+              <header><b>{NAMES[c.name] || c.name}</b><span className={`pill st-${c.status}`}>{LABEL[c.status] || c.status}</span></header>
+              <p>{c.details}</p>
+              <small className="muted">{c.source} · {c.checked_at.replace("T", " ").slice(0, 19)} UTC</small>
+            </article>
+          ))}
+        </div>
+        {r.checks.some((c) => c.name === "url_reputation" && c.status !== "not_checked") && <small className="muted">URL advisory data: Google Safe Browsing. Potential risk only.</small>}
+      </section>
 
       {chips.length > 0 && (
         <section>
@@ -77,6 +72,7 @@ export default function EvidenceLedger({ r }) {
       {r.missing_checks.length > 0 && (
         <details className="card"><summary>Not checked ({r.missing_checks.length})</summary><ul>{r.missing_checks.map((m, i) => <li key={i}>{m}</li>)}</ul></details>
       )}
+      <AuditTrail r={r} />
       <details className="card"><summary>Limitations</summary><ul>{r.limitations.map((l, i) => <li key={i}>{l}</li>)}</ul></details>
     </div>
   );

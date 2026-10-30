@@ -1,40 +1,58 @@
-// One-click independent checks. These open third-party sites; OfferGuard does not control their results.
-const SKIP = new Set(["wa.me", "t.me", "bit.ly", "forms.gle", "docs.google.com"]);
+// "Verify it yourself in 60 seconds": one-click searches for everything we extracted.
+// This turns "not checked" into action. These open other websites; we do not control their results.
 const enc = encodeURIComponent;
+const PERSONAL = ["gmail.com", "yahoo.com", "yahoo.in", "outlook.com", "hotmail.com", "rediffmail.com", "proton.me", "protonmail.com"];
+const NEUTRAL = ["wa.me", "t.me", "bit.ly", "forms.gle", "docs.google.com", "linkedin.com", "naukri.com", "indeed.com"];
+
+const google = (q) => `https://www.google.com/search?q=${enc(q)}`;
 
 export default function VerifyLinks({ fields }) {
   const f = fields || {};
-  const doms = [...new Set([...(f.url_domains || []), ...(f.recruiter_emails || []).map((e) => e.split("@")[1]?.toLowerCase())])]
-    .filter((d) => d && !SKIP.has(d) && !["gmail.com", "yahoo.com", "yahoo.in", "outlook.com", "hotmail.com", "rediffmail.com"].includes(d)).slice(0, 3);
-  const cins = f.registration_ids || [];
-  if (!doms.length && !f.company && !cins.length) return null;
+  const domains = [...new Set([
+    ...(f.url_domains || []),
+    ...(f.recruiter_emails || []).map((e) => e.split("@")[1]?.toLowerCase()),
+  ])].filter((d) => d && !PERSONAL.includes(d) && !NEUTRAL.includes(d)).slice(0, 3);
+  const emails = (f.recruiter_emails || []).slice(0, 2);
+  const phones = (f.phones || []).slice(0, 2);
+
+  const groups = [];
+  if (f.company) {
+    groups.push({ title: `Company: ${f.company}`, links: [
+      ["Search for scam or fake-offer reports", google(`"${f.company}" fake job OR scam OR fraud`)],
+      ["Find the real careers page", google(`${f.company} official careers`)],
+      ["See the company on LinkedIn", `https://www.linkedin.com/search/results/companies/?keywords=${enc(f.company)}`],
+      ["Check the office on Google Maps", `https://www.google.com/maps/search/${enc(f.company)}`],
+      ["Look up registration on the MCA portal", "https://www.mca.gov.in"],
+    ] });
+  }
+  domains.forEach((d) => groups.push({ title: `Website: ${d}`, links: [
+    ["Google Safe Browsing status", `https://transparencyreport.google.com/safe-browsing/search?url=${enc(d)}`],
+    ["Domain age and owner (WHOIS)", `https://who.is/whois/${enc(d)}`],
+    ["Search for scam reports", google(`"${d}" scam OR fake OR fraud`)],
+  ] }));
+  emails.forEach((e) => groups.push({ title: `Email: ${e}`, links: [["Search for scam reports", google(`"${e}" scam OR fraud`)]] }));
+  phones.forEach((p) => groups.push({ title: `Phone: ${p}`, links: [
+    ["Search for scam reports", google(`"${p}" scam OR fraud`)],
+    ["Look up on Truecaller", `https://www.truecaller.com/search/in/${enc(p)}`],
+  ] }));
+  groups.push({ title: "If you paid or shared details", links: [
+    ["Report at cybercrime.gov.in", "https://cybercrime.gov.in"],
+    ["Call the helpline 1930", "tel:1930"],
+  ] });
+
   return (
     <section>
-      <h3>Confirm it yourself in 60 seconds</h3>
-      <p className="muted">OfferGuard can show evidence but cannot declare a site or company "genuine". These independent sources can help you decide. Open them in a new tab.</p>
+      <h3>Verify it yourself in 60 seconds</h3>
+      <p className="muted">Checks we cannot do for you. One click each. These open other websites, and what they show is not proof either way.</p>
       <div className="grid">
-        {doms.map((d) => (
-          <article className="card check" key={d}>
-            <header><b>{d}</b><span className="pill">website</span></header>
-            <ul className="vl">
-              <li><a href={`https://transparencyreport.google.com/safe-browsing/search?url=${enc(d)}`} target="_blank" rel="noreferrer noopener">Google Safe Browsing status</a></li>
-              <li><a href={`https://lookup.icann.org/en/lookup?name=${enc(d)}`} target="_blank" rel="noreferrer noopener">Who owns it and when it was registered (ICANN)</a></li>
-              <li><a href={`https://www.google.com/search?q=${enc(`"${d}" scam OR fraud OR reviews`)}`} target="_blank" rel="noreferrer noopener">Search "{d}" scam reports</a></li>
-              <li><a href={`https://web.archive.org/web/*/${enc(d)}`} target="_blank" rel="noreferrer noopener">Website history (Internet Archive)</a></li>
-            </ul>
+        {groups.map((g) => (
+          <article key={g.title} className="card verify">
+            <b>{g.title}</b>
+            <ul>{g.links.map(([label, href]) => (
+              <li key={label}><a href={href} target="_blank" rel="noopener noreferrer">{label} ↗</a></li>
+            ))}</ul>
           </article>
         ))}
-        {(f.company || cins.length > 0) && (
-          <article className="card check">
-            <header><b>{f.company || "Company"}</b><span className="pill">company</span></header>
-            <ul className="vl">
-              <li><a href="https://www.mca.gov.in/content/mca/global/en/mca/master-data/MDS.html" target="_blank" rel="noreferrer noopener">MCA Company master data{cins[0] ? ` (search ${cins[0]})` : ""}</a></li>
-              {f.company && <li><a href={`https://www.linkedin.com/search/results/companies/?keywords=${enc(f.company)}`} target="_blank" rel="noreferrer noopener">LinkedIn company page</a></li>}
-              {f.company && <li><a href={`https://www.google.com/search?q=${enc(`"${f.company}" fake job scam`)}`} target="_blank" rel="noreferrer noopener">Search "{f.company}" scam reports</a></li>}
-              <li><a href="https://cybercrime.gov.in" target="_blank" rel="noreferrer noopener">Report at cybercrime.gov.in (helpline 1930)</a></li>
-            </ul>
-          </article>
-        )}
       </div>
     </section>
   );

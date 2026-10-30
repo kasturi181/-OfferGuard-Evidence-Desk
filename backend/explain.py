@@ -24,12 +24,8 @@ LINES = {
     "RULE-11": ("A link in the offer does not belong to the company's website.", "ऑफ़र में दिया गया लिंक कंपनी की वेबसाइट का नहीं है।"),
     "RULE-12": ("The company registration number (CIN) does not match our record.", "कंपनी का पंजीकरण नंबर (CIN) हमारे रिकॉर्ड से मेल नहीं खाता।"),
     "RULE-13": ("The job location differs from the company's recorded office.", "नौकरी की जगह कंपनी के दर्ज कार्यालय से अलग है।"),
-    "RULE-15": ("A website or email used here was created very recently.", "यहाँ इस्तेमाल हुई वेबसाइट या ईमेल हाल ही में बनाई गई है।"),
-    "RULE-16": ("A website or email domain here does not work properly.", "यहाँ दिया गया वेबसाइट या ईमेल डोमेन ठीक से काम नहीं करता।"),
-    "RULE-17": ("A link in the message sends you to a different website.", "संदेश का लिंक आपको किसी दूसरी वेबसाइट पर भेजता है।"),
-    "RULE-18": ("A web address looks like a copy or a free page.", "एक वेब पता नकली या मुफ़्त पेज जैसा दिखता है।"),
-    "RULE-19": ("The company registration number looks wrong.", "कंपनी का पंजीकरण नंबर गलत लगता है।"),
     "RULE-14": ("Other users reported similar details (unverified).", "अन्य उपयोगकर्ताओं ने ऐसी ही जानकारी की शिकायत की है (असत्यापित)।"),
+    "RULE-15": ("A website in the message was created very recently.", "संदेश में दी गई वेबसाइट हाल ही में बनाई गई है।"),
 }
 NEXT = [
     ("Check the company yourself on its official website and the MCA portal.", "कंपनी की आधिकारिक वेबसाइट और MCA पोर्टल पर खुद जाँच करें।"),

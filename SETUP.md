@@ -3,14 +3,14 @@
 Do the steps in order. Each one has a check so you know it worked.
 
 ## 1. Apply the files (5 min)
-Unzip `offerguard-final.zip` into the repo root (the folder that contains `backend` and `frontend`), choose **Replace**. Then, in PowerShell from the repo root:
+Unzip `offerguard-final-v2.zip` (it replaces any earlier zip and includes everything) into the repo root (the folder that contains `backend` and `frontend`), choose **Replace**. Then, in PowerShell from the repo root:
 ```powershell
 .\cleanup.ps1
 cd frontend
 npm install          # adds @supabase/supabase-js and updates package-lock.json
 npm run build        # must finish with "built in"
 cd ..\backend
-python -m pytest -q  # should pass
+python -m pytest -q  # should pass (run cleanup.ps1 first, or an old test file fails)
 cd ..
 ```
 
@@ -69,7 +69,7 @@ Then merge to `main` (Pull request -> Merge). Vercel Production builds from `mai
 ## 8. Check it works (10 min)
 1. `<render-url>/health` shows `"database": true`.
 2. Open the site. Header shows **Sign in**. Dashboard no longer says "Database not connected".
-3. Paste: `Selected at Infosys. Pay a refundable registration fee of Rs 2500. Contact hr.jobs@gmail.com` -> High concern, "Personal email" and a company match, plus the **Verify it yourself** panel with working links.
+3. Paste: `Selected as Data Entry Executive at Infosys, Pune. Joining date: 5th Nov 2026. Work from home. Salary Rs 85,000 per month. Pay a refundable registration fee of Rs 2500. Contact hr.jobs@gmail.com` -> top card **Do not proceed** with Role, Where, When, Pay filled in, **Website details**, the **Verify it yourself** panel, and an **Audit trail** at the bottom listing all 15 rules.
 4. Report tab -> report phone `9000000009` -> analyze a text containing that number -> Matches reports appears.
 5. Sign in -> **My checks** tab lists your analysis.
 6. If something fails: Render -> Logs. Paste the last 20 lines to me.

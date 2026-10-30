@@ -1,13 +1,49 @@
-// DEMO sign-in. Nothing is sent to a server. Data lives only in this browser (localStorage), outcome only, never offer text.
-const K = "og_demo_user", H = "og_demo_hist";
-const rd = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
-const wr = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage unavailable: app still works */ } };
-export const getUser = () => rd(K, null);
-export const login = (name, email) => { const u = { name: (name || "").trim() || "Guest", email: (email || "").trim() }; wr(K, u); return u; };
-export const logout = () => { try { localStorage.removeItem(K); } catch { /* ignore */ } };
-export const getHistory = () => rd(H, []);
-export const addHistory = (r) => {
-  const h = [{ t: new Date().toISOString(), level: r.assessment.level, counts: r.assessment.counts, company: r.extracted_fields?.company || "", rules: (r.findings || []).map((f) => f.rule_id) }, ...getHistory()].slice(0, 20);
-  wr(H, h); return h;
-};
-export const clearHistory = () => wr(H, []);
+// Optional sign-in with Supabase Auth (magic link). If the two env vars are missing, the app works exactly as before.
+// The anon key is PUBLIC by design. Data safety comes from the backend, which holds the service key.
+const URL = import.meta.env.VITE_SUPABASE_URL;
+const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+export const authEnabled = Boolean(URL && KEY);
+
+let client = null;
+async function getClient() {
+  if (!authEnabled) return null;
+  if (!client) {
+    const { createClient } = await import("@supabase/supabase-js");
+    client = createClient(URL, KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+  }
+  return client;
+}
+
+export async function getToken() {
+  try {
+    const c = await getClient();
+    if (!c) return null;
+    const { data } = await c.auth.getSession();
+    return data.session?.access_token || null;
+  } catch { return null; }
+}
+
+export async function signInWithEmail(email) {
+  const c = await getClient();
+  if (!c) throw new Error("Sign-in is not configured.");
+  const { error } = await c.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
+  if (error) throw new Error(error.message);
+}
+
+export async function signOut() {
+  const c = await getClient();
+  if (c) await c.auth.signOut();
+}
+
+// Calls cb(session|null) now and on every change. Returns an unsubscribe function.
+export function watchSession(cb) {
+  let off = () => {};
+  let dead = false;
+  getClient().then((c) => {
+    if (!c || dead) return;
+    c.auth.getSession().then(({ data }) => !dead && cb(data.session));
+    const { data } = c.auth.onAuthStateChange((_e, s) => cb(s));
+    off = () => data.subscription.unsubscribe();
+  }).catch(() => {});
+  return () => { dead = true; off(); };
+}

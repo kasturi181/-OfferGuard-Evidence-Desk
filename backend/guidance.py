@@ -13,11 +13,7 @@ TAILORED = {
     "RULE-11": ("Check the link's website", ["Do not use links from the message. Search for the company yourself and open its official careers page."]),
     "RULE-12": ("Verify the registration number", ["Look the company up on the MCA portal (mca.gov.in, Company/LLP master data) and compare the CIN with the one in the offer."]),
     "RULE-13": ("Confirm the office location", ["Ask where the job is based. Companies can have many offices, so confirm on the official website."]),
-    "RULE-15": ("Be careful: brand-new domain", ["Ask for an email from the company's own long-standing website.", "Search the company name yourself and compare its real domain with the one in the message."]),
-    "RULE-16": ("Domain looks unreachable", ["Do not reply to an address whose domain has no mail server. Contact the company through its official website instead."]),
-    "RULE-17": ("Do not follow the redirect link", ["Open the company's careers page by typing its address yourself.", "If you already opened it, do not enter any details."]),
-    "RULE-18": ("Compare the domain carefully", ["Real company sites rarely use free site-builders, shortened links or hyphen-heavy names for hiring.", "Compare the domain with the company's real website letter by letter."]),
-    "RULE-19": ("Check the CIN on MCA", ["Open the MCA portal (mca.gov.in) → Company/LLP Master Data, search the CIN and compare company name, state and incorporation date."]),
+    "RULE-15": ("Check how new the website is", ["Search for the company yourself and compare its official website with the one in the message.", "A brand-new website for a company that claims to be established is a reason to ask more questions."]),
     "RULE-14": ("Others reported matching details", ["Other users reported some of the same details. These reports are unverified, so treat them as a reason to verify, not as proof."]),
 }
 BASE = [

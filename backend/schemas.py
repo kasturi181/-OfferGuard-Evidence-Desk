@@ -48,4 +48,7 @@ class Report(BaseModel):
     analyzed_text: str = ""
     explain: dict = {}
     drafts: list[dict] = []
+    brief: dict = {}
+    audit: dict = {}
+    intel: list[dict] = []
     mode: str = "backend"

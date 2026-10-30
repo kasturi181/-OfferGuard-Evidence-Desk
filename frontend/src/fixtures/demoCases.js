@@ -1,6 +1,5 @@
 // Fictional / synthetic examples only.
 export const demoCases = [
-  { label: "Live lookups: fake domain + bad CIN", text: "Congratulations! Fabrikam Solutions Pvt Ltd (CIN L45200XX2031PTC999999, operating since 1998) selected you as Data Entry Executive, salary Rs 85,000 per month. Complete your joining at https://fabrikam-careers-hr-2026.top/join. Reply to hr@fabrikam-careers-hr-2026.top within 24 hours." },
   { label: "Suspicious: fee + personal email", text: "Hello, we at Contoso Analytics Limited are hiring freshers. Your selection is confirmed. Pay a refundable registration fee of ₹2,000 today to secure your seat. Contact HR: contoso.hr@gmail.com. Join our Telegram group for updates." },
   { label: "Real company, look-alike domain", text: "Offer letter from Northwind Tech Pvt Ltd (CIN U11111MH2000PTC000001). Location: Pune. Please send your Aadhaar card and bank details within 24 hours. Apply at https://northwind-careers.com/apply. Reply to hr@northwind-careers.com." },
   { label: "Benign-looking", text: "Hi, thanks for applying to Northwind Tech Pvt Ltd (CIN U72900KA2015PTC123456), Bengaluru. Interview is Monday 10am. Details from hr@northwindtech.example." },
@@ -18,6 +17,5 @@ export const sampleStats = {
 export const RULE_NAMES = {
   "RULE-01": "Upfront payment", "RULE-02": "OTP / credentials", "RULE-03": "Flagged URL", "RULE-04": "Email domain mismatch", "RULE-05": "Personal email",
   "RULE-06": "Documents too early", "RULE-07": "Pressure / guarantee", "RULE-08": "Implausible salary", "RULE-09": "Chat / form redirect",
-  "RULE-10": "Unverified company", "RULE-11": "Link domain mismatch", "RULE-12": "Registration ID mismatch", "RULE-13": "Location mismatch", "RULE-14": "User reports match",
-  "RULE-15": "Very new domain", "RULE-16": "Domain unreachable", "RULE-17": "Redirects elsewhere", "RULE-18": "Look-alike domain pattern", "RULE-19": "CIN looks wrong",
+  "RULE-10": "Unverified company", "RULE-11": "Link domain mismatch", "RULE-12": "Registration ID mismatch", "RULE-13": "Location mismatch", "RULE-14": "User reports match", "RULE-15": "New website",
 };
