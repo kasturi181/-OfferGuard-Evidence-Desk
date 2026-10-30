@@ -69,6 +69,10 @@ OfferGuard turns one message or PDF into one traceable report. No black-box scor
 - **Cross-source consistency**: email domain, link domains, CIN and location are each compared with the company record and explained individually.
 - **Tailored safety checklist**: next steps matched to the signals found (cybercrime.gov.in, 1930, MCA lookup).
 - **Evidence highlighted inside your original message.**
+- **Plain-language summary in English and हिन्दी** (deterministic, no LLM), so job seekers can read the result in their own language.
+- **Ready-to-send verification messages**: a message to the recruiter, one to the company's official HR, and notes for a cybercrime report, all filled from what was found.
+- **Evaluation tab**: the rules are measured on 20 synthetic, manually labelled messages (precision, recall, and every failure shown openly).
+- **Save report as PDF** (print-friendly layout).
 - **Dashboard** (aggregate stats, no offer text stored) and **Report a scam** (unverified, masked user reports) backed by Supabase.
 - **Curated company list** in the Supabase `companies` table, with a local fixture fallback.
 
@@ -139,6 +143,7 @@ offerguard/
 | POST | `/analyze-pdf` | multipart field `file` (text PDF, max 5 MB) |
 | POST | `/report` | submit an unverified scam report `{kind, value, description}` |
 | GET | `/stats` | dashboard aggregates |
+| GET | `/benchmark` | rule evaluation on 20 synthetic labelled messages |
 | GET | `/history` | saved analysis metadata if Supabase is configured |
 
 Report keys: `extracted_fields`, `findings`, `checks`, `assessment`, `missing_checks`, `limitations`, `mode`.

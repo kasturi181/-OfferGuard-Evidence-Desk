@@ -1,14 +1,20 @@
 import os
+
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
- 
+
 import db
+from checks.community import check_community
 from checks.company_identity import check_company
 from checks.url_reputation import check_urls
 from extract import extract_fields, pdf_to_text
+from benchmark import run_benchmark
+from drafts import build_drafts
+from explain import build_explanation
+from guidance import build_checklist
 from rules import LIMITS, assess, run_rules
-from schemas import AnalyzeIn, Report
- 
+from schemas import AnalyzeIn, Report, ReportIn
+
 app = FastAPI(title="OfferGuard API")
 origins = [o.strip() for o in os.getenv("FRONTEND_ORIGIN", "").split(",") if o.strip()] + ["http://localhost:5173"]
 app.add_middleware(
@@ -18,10 +24,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
- 
+
 MAX_CHARS = 20000
- 
- 
+
+
 async def analyze_text(text: str, simulate: bool = False) -> dict:
     text = text.strip()
     if not text:
@@ -29,30 +35,33 @@ async def analyze_text(text: str, simulate: bool = False) -> dict:
     if len(text) > MAX_CHARS:
         raise HTTPException(413, f"Input too long (max {MAX_CHARS} chars).")
     fields = extract_fields(text)
-    checks = [await check_urls(fields["urls"], simulate), check_company(text, fields)]
+    companies, source = await db.load_companies()
+    checks = [await check_urls(fields["urls"], simulate), *check_company(text, fields, companies, source), await check_community(fields)]
     findings = run_rules(text, fields, checks)
     missing = [f"{c['name']}: {c['details']}" for c in checks if c["status"] in ("not_checked", "unavailable")]
-    report = Report(extracted_fields=fields, findings=findings, checks=checks, assessment=assess(findings),
-                    missing_checks=missing, limitations=LIMITS).model_dump()
-    await db.save_report(text, report)
+    assessment = assess(findings)
+    report = Report(extracted_fields=fields, findings=findings, checks=checks, assessment=assessment, missing_checks=missing,
+                    limitations=LIMITS, checklist=build_checklist(findings), analyzed_text=text,
+                    explain=build_explanation(findings, assessment), drafts=build_drafts(text, fields, findings, companies)).model_dump()
+    await db.save_report_meta(report["assessment"]["level"], [f["rule_id"] for f in findings], fields["company"])
     return report
- 
- 
+
+
 @app.get("/")
 def root():
     return {"service": "OfferGuard API", "docs": "/docs", "health": "/health"}
- 
- 
+
+
 @app.get("/health")
 def health():
-    return {"status": "healthy"}
- 
- 
+    return {"status": "healthy", "database": db.enabled()}
+
+
 @app.post("/analyze")
 async def analyze(body: AnalyzeIn):
     return await analyze_text(body.text, body.simulate_url_failure)
- 
- 
+
+
 @app.post("/analyze-pdf")
 async def analyze_pdf(file: UploadFile = File(...)):
     data = await file.read()
@@ -65,12 +74,30 @@ async def analyze_pdf(file: UploadFile = File(...)):
     if len(text) < 20:
         raise HTTPException(422, "No extractable text. Scanned PDFs are not supported (no OCR). Paste the text instead.")
     return await analyze_text(text)
- 
- 
+
+
+@app.post("/report")
+async def report_scam(body: ReportIn):
+    if not db.enabled():
+        raise HTTPException(503, "Reporting is not enabled (database not configured).")
+    if not await db.insert_scam_report(body.kind, body.value, body.description):
+        raise HTTPException(502, "Could not save the report. Try again.")
+    return {"saved": True, "message": "Thanks. Your report is stored as unverified."}
+
+
+@app.get("/benchmark")
+def benchmark():
+    return run_benchmark()
+
+
+@app.get("/stats")
+async def stats():
+    return await db.stats()
+
+
 @app.get("/history")
 async def history():
     rows = await db.list_reports()
     if rows is None:
         return {"enabled": False, "items": []}
     return {"enabled": True, "items": rows}
- 

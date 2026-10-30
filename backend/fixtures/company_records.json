@@ -1,5 +1,6 @@
-{"_note": "Synthetic demo data. Not an authoritative registry.",
+{"_note": "Synthetic demo data. Not an authoritative registry. Replace/extend in Supabase table `companies`.",
  "records": [
-  {"name": "Northwind Tech Pvt Ltd", "official_domains": ["northwindtech.example"]},
-  {"name": "Contoso Analytics Limited", "official_domains": ["contosoanalytics.example"]}
+  {"name": "Northwind Tech Pvt Ltd", "official_domains": ["northwindtech.example"], "cin": "U72900KA2015PTC123456", "city": "Bengaluru", "careers_url": "https://northwindtech.example/careers", "source": "synthetic demo"},
+  {"name": "Contoso Analytics Limited", "official_domains": ["contosoanalytics.example"], "cin": "U74999MH2012PLC234567", "city": "Mumbai", "careers_url": "https://contosoanalytics.example/careers", "source": "synthetic demo"},
+  {"name": "Fabrikam Systems Pvt Ltd", "official_domains": ["fabrikamsystems.example"], "cin": "U72200TG2018PTC345678", "city": "Hyderabad", "careers_url": "https://fabrikamsystems.example/jobs", "source": "synthetic demo"}
  ]}

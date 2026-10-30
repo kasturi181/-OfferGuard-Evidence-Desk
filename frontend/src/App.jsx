@@ -1,9 +1,10 @@
 import { useState } from "react";
 import AnalyzeView from "./views/AnalyzeView.jsx";
 import DashboardView from "./views/DashboardView.jsx";
+import EvalView from "./views/EvalView.jsx";
 import ReportView from "./views/ReportView.jsx";
 
-const TABS = [["analyze", "Analyze"], ["dashboard", "Dashboard"], ["report", "Report a scam"]];
+const TABS = [["analyze", "Analyze"], ["dashboard", "Dashboard"], ["eval", "Evaluation"], ["report", "Report a scam"]];
 
 export default function App() {
   const [tab, setTab] = useState("analyze");
@@ -16,6 +17,7 @@ export default function App() {
       <main>
         <div hidden={tab !== "analyze"}><AnalyzeView /></div>
         {tab === "dashboard" && <DashboardView />}
+        {tab === "eval" && <EvalView />}
         {tab === "report" && <ReportView />}
       </main>
       <footer>Decision support, not legal advice. Signals ≠ proof of fraud. Demo uses synthetic company records.</footer>

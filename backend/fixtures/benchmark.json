@@ -1,0 +1,23 @@
+{"_note": "Synthetic, manually labelled messages. Fictional companies. Not a real-world accuracy claim.",
+ "cases": [
+  {"id": "S01", "label": "scam", "text": "Congratulations! You are selected as Data Entry Executive at Contoso Analytics Limited. Pay a refundable registration fee of ₹1,500 to confirm your seat. HR: contoso.hr@gmail.com", "expect": ["RULE-01", "RULE-05"]},
+  {"id": "S02", "label": "scam", "text": "Your payroll KYC is pending. Share your OTP with our HR executive to complete joining.", "expect": ["RULE-02"]},
+  {"id": "S03", "label": "scam", "text": "Work from home, earn ₹80,000 per month. Guaranteed selection. Send your Aadhaar card and bank passbook within 2 hours.", "expect": ["RULE-06", "RULE-07", "RULE-08"]},
+  {"id": "S04", "label": "scam", "text": "Part time job. Earn ₹5,000 per day. Join our Telegram group t.me/jobs_fast. Security deposit of Rs 999 refundable.", "expect": ["RULE-01", "RULE-09"]},
+  {"id": "S05", "label": "scam", "text": "Offer from Northwind Tech Pvt Ltd. Reply to hr@northwind-careers.com and apply at https://northwind-careers.com/apply", "expect": ["RULE-04", "RULE-11"]},
+  {"id": "S06", "label": "scam", "text": "Northwind Tech Pvt Ltd (CIN U11111MH2000PTC000001) offers you a role. Contact hr@northwindtech.example", "expect": ["RULE-12"]},
+  {"id": "S07", "label": "scam", "text": "Selected for internship at Fabrikam Systems Pvt Ltd. Pay training charges of ₹3,000 today. Last chance. hr.fabrikam@yahoo.com", "expect": ["RULE-01", "RULE-05", "RULE-07"]},
+  {"id": "S08", "label": "scam", "text": "To release your joining kit, send your net banking password and UPI PIN.", "expect": ["RULE-02"]},
+  {"id": "S09", "label": "scam", "text": "Congratulations, you are hired. Kindly transfer ₹500 for your ID card and uniform to UPI id jobs@upi and we will send the offer letter.", "expect": [], "note": "Known miss: a fee worded as 'ID card and uniform' is not covered by the payment patterns."},
+  {"id": "S10", "label": "scam", "text": "Hi, I am HR from a top MNC. Message me on WhatsApp 9876543210 for a work-from-home job.", "expect": ["RULE-09"]},
+  {"id": "B01", "label": "benign", "text": "Hi, thanks for applying to Northwind Tech Pvt Ltd (CIN U72900KA2015PTC123456), Bengaluru. Interview is Monday 10am. Details from hr@northwindtech.example.", "expect": []},
+  {"id": "B02", "label": "benign", "text": "We are pleased to offer you the position of Software Engineer at Contoso Analytics Limited, Mumbai, CTC 12 LPA. Please reply to careers@contosoanalytics.example to accept.", "expect": []},
+  {"id": "B03", "label": "benign", "text": "Your interview is moved to Tuesday 3pm. Please bring a copy of your resume.", "expect": []},
+  {"id": "B04", "label": "benign", "text": "Thank you for interviewing. We have decided to move forward with other candidates.", "expect": []},
+  {"id": "B05", "label": "benign", "text": "Welcome aboard! After you sign the offer letter, HR will share the onboarding checklist.", "expect": []},
+  {"id": "B06", "label": "benign", "text": "There is no registration fee or any charge at any stage of our hiring process.", "expect": []},
+  {"id": "B07", "label": "benign", "text": "Hi, I am the founder of a small startup. We liked your portfolio. Email me at founder.startup@gmail.com. Our HR team will follow up.", "expect": [], "note": "Known false alarm: small startups really do use Gmail, so the personal-email rule fires."},
+  {"id": "B08", "label": "benign", "text": "Campus drive by Fabrikam Systems Pvt Ltd on 5 Nov. Register at https://fabrikamsystems.example/jobs. Contact careers@fabrikamsystems.example.", "expect": []},
+  {"id": "B09", "label": "benign", "text": "Offer: Software Engineer at Contoso Analytics Limited, Mumbai. Salary ₹1,20,000 per month. Email careers@contosoanalytics.example.", "expect": []},
+  {"id": "B10", "label": "benign", "text": "Internship at Northwind Tech Pvt Ltd, Bengaluru, stipend ₹15,000 per month. Apply at https://northwindtech.example/careers or write to hr@northwindtech.example", "expect": []}
+ ]}

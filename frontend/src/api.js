@@ -58,7 +58,23 @@ export async function analyzePdf(file) {
   }
 }
 
+export const getBenchmark = () => request("/benchmark", {}, 60000);
+
 export const getStats = () => request("/stats", {}, 30000);
 
 export const submitReport = (payload) =>
   request("/report", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+
+// Reads text from a screenshot in the browser (Tesseract). The image never leaves the user's device.
+export async function ocrImage(file, onProgress) {
+  const { createWorker } = await import("tesseract.js");
+  const worker = await createWorker("eng", 1, {
+    logger: (m) => { if (m.status === "recognizing text" && onProgress) onProgress(Math.round(m.progress * 100)); },
+  });
+  try {
+    const { data } = await worker.recognize(file);
+    return (data.text || "").trim();
+  } finally {
+    await worker.terminate();
+  }
+}

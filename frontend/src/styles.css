@@ -51,3 +51,12 @@ details.card summary{cursor:pointer;font-weight:600}
 .form label{display:block;margin:10px 0;font-weight:500}.form label.check-l{font-weight:400}.form input,.form select,.form textarea{margin-top:5px}
 footer{padding:16px;text-align:center;color:var(--muted);font-size:.82rem}
 @media(max-width:600px){dl{grid-template-columns:1fr}.bars li{grid-template-columns:100px 1fr 30px}h1{font-size:1.4rem}}
+.between{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.between h3{margin:0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}.seg button{border:0;background:transparent;color:var(--muted);padding:5px 14px;font:inherit;cursor:pointer}.seg .on{background:var(--accent);color:#fff}
+.explain .lead{font-size:1.08rem;margin:.6rem 0}.explain ul{margin:.3rem 0 .8rem;padding-left:1.2rem}
+.right{text-align:right}.small{padding:5px 12px;font-size:.85rem}
+.draft pre{white-space:pre-wrap;word-break:break-word;font:inherit;font-size:.9rem;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;margin:8px 0 0}
+.draft header{justify-content:space-between}
+.confusion table{border-collapse:collapse;width:100%;display:table}.confusion th,.confusion td{border:1px solid var(--line);padding:8px 12px;text-align:center}.good{color:var(--ok);font-weight:700}.bad{color:var(--strong);font-weight:700}
+.erow{margin:8px 0}.erow.wrong{border-left:6px solid var(--strong)}.erow p{margin:.3rem 0}.warnnote{color:var(--medium)}
+@media print{.top,.input,.hero,footer,.noprint,.chips{display:none!important}body{background:#fff;color:#000}.card,.meter{box-shadow:none;break-inside:avoid}main{max-width:none;padding:0}}

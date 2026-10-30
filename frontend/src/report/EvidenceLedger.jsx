@@ -1,6 +1,8 @@
 import FindingCard from "./FindingCard.jsx";
 import RiskMeter from "./RiskMeter.jsx";
 import HighlightedText from "./HighlightedText.jsx";
+import Explain from "./Explain.jsx";
+import Drafts from "./Drafts.jsx";
 import Checklist from "./Checklist.jsx";
 
 const NAMES = {
@@ -22,6 +24,8 @@ export default function EvidenceLedger({ r }) {
         <p className="banner warn">Backend unreachable — showing reduced local analysis.<br /><small>{r.fallback_reason}</small></p>
       )}
       <RiskMeter a={r.assessment} />
+      <div className="noprint right"><button className="btn small" onClick={() => window.print()}>Save report as PDF</button></div>
+      <Explain data={r.explain} />
 
       <section>
         <h3>Your message, evidence highlighted</h3>
@@ -29,6 +33,7 @@ export default function EvidenceLedger({ r }) {
       </section>
 
       <Checklist items={r.checklist} />
+      <Drafts items={r.drafts} />
 
       <section>
         <h3>Findings <span className="muted">({r.findings.length})</span></h3>

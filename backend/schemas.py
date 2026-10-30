@@ -1,5 +1,5 @@
-from typing import Optional
-from pydantic import BaseModel
+from typing import Literal, Optional
+from pydantic import BaseModel, Field
 
 
 class AnalyzeIn(BaseModel):
@@ -7,9 +7,15 @@ class AnalyzeIn(BaseModel):
     simulate_url_failure: bool = False
 
 
+class ReportIn(BaseModel):
+    kind: Literal["email", "domain", "company", "phone"]
+    value: str = Field(min_length=3, max_length=200)
+    description: str = Field(default="", max_length=500)
+
+
 class Finding(BaseModel):
     rule_id: str
-    severity: str  # strong | medium | weak
+    severity: str  # strong | medium | weak | info
     title: str
     claim: str
     evidence: str
@@ -17,7 +23,7 @@ class Finding(BaseModel):
     end: Optional[int] = None
     source: str
     why: str
-    status: str  # matched_rule | warning | unavailable
+    status: str
     uncertainty: str
     action: str
 
@@ -37,4 +43,8 @@ class Report(BaseModel):
     assessment: dict
     missing_checks: list[str]
     limitations: list[str]
+    checklist: list[dict] = []
+    analyzed_text: str = ""
+    explain: dict = {}
+    drafts: list[dict] = []
     mode: str = "backend"
