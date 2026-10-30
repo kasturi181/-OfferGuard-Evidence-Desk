@@ -65,35 +65,63 @@ async def find_scam_reports(values: list[str]):
     try:
         async with httpx.AsyncClient(timeout=3.0) as c:
             r = await c.get(f"{url}/rest/v1/scam_reports", headers=h,
-                            params={"select": "kind,value,description,created_at", "value": "in.(" + ",".join(clean(v) for v in values) + ")", "limit": "200"})
+                            params={"select": "*", "value": "in.(" + ",".join(clean(v) for v in values) + ")", "limit": "300"})
             r.raise_for_status()
             return "ok", r.json()
     except Exception:  # noqa: BLE001
         return "error", []
 
 
-async def insert_scam_report(kind: str, value: str, description: str) -> bool:
+async def insert_scam_report(kind: str, value: str, description: str, source: str = "user", reporter: str | None = None) -> bool:
+    """One row per (kind, value, reporter): the same person reporting twice does not inflate the count.
+    Falls back to the old column set if the migration (supabase_update.sql) has not been run yet."""
     cfg = _cfg()
     if not cfg:
         return False
     url, h = cfg
+    row = {"kind": kind, "value": clean(value), "description": description[:500], "source": source, "reporter": reporter}
     try:
         async with httpx.AsyncClient(timeout=4.0) as c:
-            r = await c.post(f"{url}/rest/v1/scam_reports", headers=h, json={"kind": kind, "value": clean(value), "description": description[:500]})
+            r = await c.post(f"{url}/rest/v1/scam_reports", params={"on_conflict": "kind,value,reporter"},
+                             headers={**h, "Prefer": "resolution=ignore-duplicates,return=minimal"}, json=row)
+            if r.status_code < 300:
+                return True
+            legacy = await c.post(f"{url}/rest/v1/scam_reports", headers=h, json={"kind": kind, "value": clean(value), "description": description[:500]})
+            return legacy.status_code < 300
+    except Exception:  # noqa: BLE001
+        return False
+
+
+async def insert_auto_signals(items: list[tuple[str, str]], reporter: str) -> bool:
+    """Remember recruiter details seen in a high-risk analysis. Silent on failure; never blocks the analysis."""
+    cfg = _cfg()
+    if not (cfg and items):
+        return False
+    url, h = cfg
+    rows = [{"kind": k, "value": clean(v), "description": "Auto: seen in a high-risk analysis", "source": "auto", "reporter": reporter} for k, v in items]
+    try:
+        async with httpx.AsyncClient(timeout=4.0) as c:
+            r = await c.post(f"{url}/rest/v1/scam_reports", params={"on_conflict": "kind,value,reporter"},
+                             headers={**h, "Prefer": "resolution=ignore-duplicates,return=minimal"}, json=rows)
             return r.status_code < 300
     except Exception:  # noqa: BLE001
         return False
 
 
-async def save_report_meta(level: str, rule_ids: list[str], company: str | None) -> bool:
-    """Stores only metadata, never the offer text (privacy)."""
+async def save_report_meta(level: str, rule_ids: list[str], company: str | None, user_id: str | None = None) -> bool:
+    """Stores only metadata, never the offer text (privacy). user_id is set only when the user is signed in."""
     cfg = _cfg()
     if not cfg:
         return False
     url, h = cfg
+    row = {"risk_level": level, "rule_ids": rule_ids, "company": company}
     try:
         async with httpx.AsyncClient(timeout=3.0) as c:
-            r = await c.post(f"{url}/rest/v1/reports", headers=h, json={"risk_level": level, "rule_ids": rule_ids, "company": company})
+            if user_id:
+                r = await c.post(f"{url}/rest/v1/reports", headers=h, json={**row, "user_id": user_id})
+                if r.status_code < 300:
+                    return True
+            r = await c.post(f"{url}/rest/v1/reports", headers=h, json=row)
             return r.status_code < 300
     except Exception:  # noqa: BLE001
         return False
@@ -117,9 +145,9 @@ async def stats() -> dict:
     try:
         async with httpx.AsyncClient(timeout=5.0) as c:
             rr = await c.get(f"{url}/rest/v1/reports", headers=h, params={"select": "created_at,risk_level,rule_ids", "order": "created_at.desc", "limit": "1000"})
-            sr = await c.get(f"{url}/rest/v1/scam_reports", headers=h, params={"select": "kind,value,description,created_at", "order": "created_at.desc", "limit": "500"})
+            sr = await c.get(f"{url}/rest/v1/scam_reports", headers=h, params={"select": "*", "order": "created_at.desc", "limit": "500"})
             rr.raise_for_status(); sr.raise_for_status()
-            reps, scams = rr.json(), sr.json()
+            reps, scams = rr.json(), [x for x in sr.json() if x.get("source") != "auto"]
     except Exception:  # noqa: BLE001
         return {"enabled": False, "companies_in_dataset": companies, "error": "database unreachable"}
     levels = Counter(r["risk_level"] for r in reps)
@@ -137,11 +165,15 @@ async def stats() -> dict:
     }
 
 
-async def list_reports(limit: int = 20):
+async def list_reports(limit: int = 20, user_id: str | None = None):
     cfg = _cfg()
     if not cfg:
         return None
     url, h = cfg
+    params = {"select": "id,created_at,risk_level,rule_ids,company", "order": "created_at.desc", "limit": limit}
+    if user_id:
+        params["user_id"] = f"eq.{user_id}"
     async with httpx.AsyncClient(timeout=4.0) as c:
-        r = await c.get(f"{url}/rest/v1/reports", headers=h, params={"select": "id,created_at,risk_level,rule_ids,company", "order": "created_at.desc", "limit": limit})
+        r = await c.get(f"{url}/rest/v1/reports", headers=h, params=params)
+        r.raise_for_status()
         return r.json()

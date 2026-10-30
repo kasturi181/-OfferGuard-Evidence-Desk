@@ -5,10 +5,10 @@
 > OfferGuard does not claim to prove whether a job offer is genuine. It identifies explainable warning signals, checks available evidence, exposes missing verification, and helps job seekers decide what to confirm before taking action.
 
 🔗 **Live demo:** [EDIT: https://your-frontend.vercel.app](https://your-frontend.vercel.app)
-⚙️ **API docs:** [EDIT: https://your-backend.vercel.app/docs](https://your-backend.vercel.app/docs)
+⚙️ **API docs:** [offerguard-api-20f2.onrender.com/docs](https://offerguard-api-20f2.onrender.com/docs) (free hosting: the first request can take about a minute to wake the server)
 🎥 **Demo video:** [EDIT: link, or delete this line]
 🏆 **Built for:** [EDIT: FirstHack – Open Innovation track]
-👤 **Author:** [EDIT: Your Name](https://github.com/kasturi181)
+👤 **Author:** [Kasturi Adakure](https://github.com/kasturi181)
 
 ---
 
@@ -23,7 +23,7 @@
 8. [API](#api)
 9. [Run locally](#run-locally)
 10. [Environment variables](#environment-variables)
-11. [Deploy on Vercel](#deploy-on-vercel)
+11. [Deploy](#deploy)
 12. [Testing](#testing)
 13. [Limitations](#limitations)
 14. [Roadmap](#roadmap)
@@ -33,13 +33,18 @@
 ---
 
 ## Problem
-[EDIT: 2–3 lines. Example: Fake job offers that ask for registration fees, OTPs or personal documents target freshers every day. Job seekers have no quick way to check what is suspicious in a message or why.]
+Fake job offers that ask for registration fees, OTPs or identity documents target freshers every day. Checking one by hand means 15 minutes of searching the company, the recruiter's email, the website and the phone number. Most people skip it, or do not know what to look for.
+
+OfferGuard does that first pass in seconds, shows exactly which words raised a flag, and gives one-click links for the checks no software can do for you.
 
 ## Solution
 OfferGuard turns one message or PDF into one traceable report. No black-box score. Every warning links to the exact text that triggered it, and every check that could not run is listed as "not checked", never as "safe".
 
 ## Features
-- **Paste or upload**: pasted text or text-based PDF offer letters (no OCR).
+- **Paste, PDF or screenshot**: paste text, upload a text PDF, or upload a screenshot of a chat. Screenshots are read on the user's device with OCR (tesseract.js); the image is never uploaded.
+- **Verify it yourself in 60 seconds**: for every company, website, email and phone number found, one-click searches (scam reports, Safe Browsing status, WHOIS, MCA, LinkedIn, Truecaller) so users do not have to research from scratch.
+- **Community signal that grows with use**: user reports plus recruiter details auto-remembered from strong scams (fee or OTP requests). A match is shown only as an unverified signal, and an auto-learned one needs 2 different reporters. Well-known sites and verified company domains are never learned.
+- **Optional sign-in** (Supabase magic link): personal history of past checks (outcome only, never the offer text) and spam protection for reports.
 - **Field extraction**: company name, recruiter emails, URLs, salary amounts, payment phrases.
 - **10 deterministic, auditable rules** with strong / medium / weak / info severity:
 
@@ -58,11 +63,11 @@ OfferGuard turns one message or PDF into one traceable report. No black-box scor
 | 11 | Link in offer points away from the company's official domain | Medium |
 | 12 | Registration ID (CIN) differs from the record | Medium |
 | 13 | Offer location differs from the recorded office | Weak |
-| 14 | Details match unverified user reports | Weak |
+| 14 | Details match unverified user reports or earlier high-risk checks | Weak (Medium when 3 or more match) |
 
 - **Evidence ledger**: claim, exact matched text with character offsets, source, check status, why it matters, uncertainty, next action.
 - **Live URL reputation** with Google Safe Browsing (optional key). "No known match" is never shown as "safe".
-- **Company identity check** comparing recruiter email domain to a small synthetic sample dataset.
+- **Company identity check** comparing recruiter email and link domains to a curated list of employers (a `companies` table you can extend; includes well-known brands that scammers impersonate).
 - **Honest failure handling**: unavailable checks are listed under "Not checked". A "Simulate URL check failure" toggle demonstrates this.
 - **Local fallback**: if the backend is unreachable, the frontend runs a reduced rule set and labels it clearly.
 - **Transparent risk indicator**: rule-count level (high / elevated / some / none). Not a fraud probability.
@@ -190,13 +195,13 @@ VITE_API_BASE_URL=http://127.0.0.1:8000   # no trailing slash
 ```
 Never commit `.env` files. Only `.env.example` is tracked.
 
-## Deploy on Vercel
-1. **Backend project**: import the repo, Root Directory `backend`, add env vars, deploy. Check `/health`.
-2. **Frontend project**: import the repo, Root Directory `frontend`, Vite preset, set `VITE_API_BASE_URL` to the backend URL, deploy.
-3. Set backend `FRONTEND_ORIGIN` to the frontend URL and redeploy the backend.
-4. Optional: run `supabase.sql` in the Supabase SQL editor to enable history.
-
-Changing a `VITE_` variable needs a redeploy of the frontend.
+## Deploy
+- **Backend**: Render Web Service. Root Directory `backend`, build `pip install -r requirements.txt`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`. Check `/health`.
+- **Frontend**: Vercel (or a Render Static Site). Root Directory `frontend`, Vite preset, set `VITE_API_BASE_URL` to the backend URL.
+- Set backend `FRONTEND_ORIGIN` to the frontend URL.
+- **Database**: in the Supabase SQL editor run `supabase.sql`, then `supabase_update.sql`, then (after checking each domain) `supabase_seed_companies.sql`.
+- **Sign-in (optional)**: set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` on the frontend. Only the public anon key goes in the frontend; the service key stays on the backend.
+- Changing a `VITE_` variable needs a redeploy of the frontend.
 
 ## Testing
 ```bash
@@ -208,20 +213,24 @@ Tests cover each rule, false-positive checks, input validation, bad PDFs and the
 ## Limitations
 - Warning signals are not proof of fraud. No signals is not proof of safety.
 - A company-record match does not prove the recruiter is authorized.
-- Company data is a tiny synthetic sample, not an official registry (no live MCA lookup).
-- Scanned PDFs are not supported (no OCR).
+- Company data is a curated list, not an official registry (no live MCA lookup). Unknown companies show as "not checked".
+- Scanned PDFs are not read directly; upload a screenshot of the page instead. OCR can misread characters, so check the extracted text.
+- Community signals depend on how many people use the tool, and reports are unverified.
+- A rule-based tool cannot prove an offer is genuine. A clean result means "no known warning signs", so verify the employer yourself.
 - Salary rule uses a fixed rule-of-thumb threshold, not market data.
 - Demo cases use fictional names only.
 
 ## Roadmap
-- [ ] Live company registry integration
-- [ ] Highlight evidence inside the original text
-- [ ] Per-report verification checklist
-- [ ] Supabase Auth and per-user history
+- [x] Highlight evidence inside the original text
+- [x] Per-report verification checklist and one-click verify links
+- [x] Screenshot OCR
+- [x] Supabase Auth and per-user history
+- [x] Auto-learned community signal
+- [x] Exportable PDF report (print to PDF)
+- [ ] Live company registry integration (MCA)
+- [ ] OCR for scanned multi-page PDFs
 - [ ] Optional LLM-assisted extraction (rules stay deterministic)
-- [ ] OCR for scanned PDFs
-- [ ] Exportable PDF report
-- [ ] [EDIT: your own idea]
+- [ ] Moderator review of community reports
 
 ## Contributing
 1. Fork the repo and create a branch: `git checkout -b feature-name`
@@ -230,7 +239,7 @@ Tests cover each rule, false-positive checks, input validation, bad PDFs and the
 4. Open a pull request
 
 ## License
-[EDIT: MIT. Your GitHub repo already has a LICENSE file, so keep this line matching it.]
+MIT. See [LICENSE](LICENSE).
 
 ---
 Disclaimer: OfferGuard is decision support, not legal advice. Verify any employer independently before paying or sharing documents.

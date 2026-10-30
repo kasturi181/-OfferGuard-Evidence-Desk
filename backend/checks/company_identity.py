@@ -5,6 +5,13 @@ from extract import domain_of
 
 SUFFIX = re.compile(r"\b(pvt|private|ltd|limited|llp|inc)\b")
 SKIP_DOMAINS = {"wa.me", "t.me", "forms.gle", "bit.ly", "docs.google.com"}  # covered by RULE-09
+# Common third-party sites a real recruiter may link to. Not evidence for or against the company.
+NEUTRAL_DOMAINS = {"linkedin.com", "naukri.com", "indeed.com", "glassdoor.com", "glassdoor.co.in", "zoom.us", "calendly.com",
+                   "meet.google.com", "teams.microsoft.com", "gov.in"}
+
+
+def _skipped(d: str) -> bool:
+    return d in SKIP_DOMAINS or any(d == n or d.endswith("." + n) for n in NEUTRAL_DOMAINS)
 
 
 def norm(s: str) -> str:
@@ -42,7 +49,7 @@ def check_company(text: str, fields: dict, companies: list[dict], source: str) -
         else:
             out.append(mk("email_domain_consistency", "warning", f"Recruiter domain '{dom}' differs from known official domain(s) {official} for {rec['name']}."))
 
-    link_domains = [d for d in fields.get("url_domains") or [] if d not in SKIP_DOMAINS]
+    link_domains = [d for d in fields.get("url_domains") or [] if not _skipped(d)]
     if not link_domains:
         out.append(mk("link_domain_consistency", "not_checked", "No company/careers links in the message to compare."))
     else:

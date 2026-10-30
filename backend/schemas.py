@@ -34,6 +34,7 @@ class Check(BaseModel):
     source: str
     checked_at: str
     details: str
+    count: int = 0  # community check: number of matching reports (drives severity)
 
 
 class Report(BaseModel):

@@ -5,10 +5,12 @@ import db
 from checks.company_identity import norm
 from rules import PERSONAL
 
+AUTO_MIN_REPORTERS = 2  # an auto-learned signal needs this many different reporters before it is shown
+
 
 async def check_community(fields: dict) -> dict:
-    base = {"name": "community_reports", "source": "OfferGuard user reports (unverified)",
-            "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    base = {"name": "community_reports", "source": "OfferGuard user reports + earlier high-risk checks (unverified)",
+            "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "count": 0}
     wanted: set[tuple[str, str]] = set()
     for e in fields.get("recruiter_emails", []):
         wanted.add(("email", db.clean(e)))
@@ -26,8 +28,33 @@ async def check_community(fields: dict) -> dict:
         return {**base, "status": "not_checked", "details": "Database not configured. Community report lookup NOT performed."}
     if status == "error":
         return {**base, "status": "unavailable", "details": "Community report lookup failed. Check NOT performed."}
-    hits = Counter((r["kind"], r["value"]) for r in rows if (r["kind"], r["value"]) in wanted)
-    if not hits:
-        return {**base, "status": "no_match", "details": "No matching user reports. This does NOT mean the offer is safe."}
-    parts = [f"{k} '{db.mask(k, v)}' ({n} report{'s' if n > 1 else ''})" for (k, v), n in hits.items()]
-    return {**base, "status": "warning", "details": "Matching user reports: " + "; ".join(parts) + ". Reports are unverified."}
+
+    users: Counter = Counter()
+    autos: dict[tuple[str, str], set] = {}
+    for r in rows:
+        key = (r.get("kind"), r.get("value"))
+        if key not in wanted:
+            continue
+        if r.get("source") == "auto":
+            autos.setdefault(key, set()).add(r.get("reporter") or r.get("id"))
+        else:
+            users[key] += 1
+
+    parts, total = [], 0
+    for key in sorted(set(users) | set(autos)):
+        u = users.get(key, 0)
+        a = len(autos.get(key, ()))
+        a = a if a >= AUTO_MIN_REPORTERS else 0
+        if not (u or a):
+            continue
+        bits = []
+        if u:
+            bits.append(f"{u} user report{'s' if u > 1 else ''}")
+        if a:
+            bits.append(f"seen in {a} earlier high-risk checks")
+        parts.append(f"{key[0]} '{db.mask(*key)}' ({', '.join(bits)})")
+        total += u + a
+    if not parts:
+        return {**base, "status": "no_match", "details": "No matching reports. This does NOT mean the offer is safe."}
+    return {**base, "status": "warning", "count": total,
+            "details": "Matches: " + "; ".join(parts) + ". Reports and auto-detected signals are unverified."}

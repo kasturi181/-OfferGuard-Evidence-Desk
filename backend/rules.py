@@ -15,7 +15,8 @@ LIMITS = [
     "Warning signals are not proof of fraud. Absence of signals is not proof of safety.",
     "A company-record match shows an entity may exist; it does not prove the recruiter is authorized.",
     "Company records come from a small synthetic sample dataset, not an official registry.",
-    "Scanned/image PDFs are not supported (no OCR).",
+    "Scanned PDFs are not read directly. Upload a screenshot of the page or paste the text instead.",
+    "Community signals come from unverified user reports and earlier high-risk checks. They can be wrong or malicious.",
 ]
 
 
@@ -60,7 +61,7 @@ def run_rules(text: str, fields: dict, checks: list[dict], consistency: list[dic
         out.append(from_check("RULE-13", "weak", "Location differs from the record", "The offer mentions a city different from the recorded head office.", c,
                               "A weak signal on its own.", "Ask where the job is based and confirm on the official website.", "Companies often have several offices."))
     if (c := chk("community_reports")) and c["status"] == "warning":
-        out.append(from_check("RULE-14", "weak", "Matches user-submitted reports", "Some details match reports submitted by other users.", c,
+        out.append(from_check("RULE-14", "medium" if c.get("count", 0) >= 3 else "weak", "Matches reports from other users", "Some details match reports or earlier high-risk checks from other people.", c,
                               "Independent reports are a reason to verify more carefully.", "Verify through official channels before proceeding.",
                               "Reports are unverified and could be mistaken or malicious."))
     comp = fields.get("company")

@@ -1,9 +1,11 @@
 import os
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
+import auth
 import db
+import learn
 from checks.community import check_community
 from checks.company_identity import check_company
 from checks.url_reputation import check_urls
@@ -28,7 +30,7 @@ app.add_middleware(
 MAX_CHARS = 20000
 
 
-async def analyze_text(text: str, simulate: bool = False) -> dict:
+async def analyze_text(text: str, simulate: bool = False, request: Request | None = None) -> dict:
     text = text.strip()
     if not text:
         raise HTTPException(422, "Empty input.")
@@ -43,7 +45,10 @@ async def analyze_text(text: str, simulate: bool = False) -> dict:
     report = Report(extracted_fields=fields, findings=findings, checks=checks, assessment=assessment, missing_checks=missing,
                     limitations=LIMITS, checklist=build_checklist(findings), analyzed_text=text,
                     explain=build_explanation(findings, assessment), drafts=build_drafts(text, fields, findings, companies)).model_dump()
-    await db.save_report_meta(report["assessment"]["level"], [f["rule_id"] for f in findings], fields["company"])
+    user = await auth.current_user(request)
+    await db.save_report_meta(report["assessment"]["level"], [f["rule_id"] for f in findings], fields["company"], user["id"] if user else None)
+    if report["assessment"]["level"] == "high":  # learn recruiter details from strong scams so the next victim sees a match
+        await db.insert_auto_signals(learn.signals_from(fields, findings, companies), auth.client_id(request, user))
     return report
 
 
@@ -54,16 +59,16 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy", "database": db.enabled()}
+    return {"status": "healthy", "database": db.enabled(), "login_required_for_reports": auth.login_required_for_reports()}
 
 
 @app.post("/analyze")
-async def analyze(body: AnalyzeIn):
-    return await analyze_text(body.text, body.simulate_url_failure)
+async def analyze(body: AnalyzeIn, request: Request):
+    return await analyze_text(body.text, body.simulate_url_failure, request)
 
 
 @app.post("/analyze-pdf")
-async def analyze_pdf(file: UploadFile = File(...)):
+async def analyze_pdf(request: Request, file: UploadFile = File(...)):
     data = await file.read()
     if len(data) > 5_000_000:
         raise HTTPException(413, "PDF too large (max 5MB).")
@@ -73,16 +78,34 @@ async def analyze_pdf(file: UploadFile = File(...)):
         raise HTTPException(422, "Could not read PDF.")
     if len(text) < 20:
         raise HTTPException(422, "No extractable text. Scanned PDFs are not supported (no OCR). Paste the text instead.")
-    return await analyze_text(text)
+    return await analyze_text(text, False, request)
 
 
 @app.post("/report")
-async def report_scam(body: ReportIn):
+async def report_scam(body: ReportIn, request: Request):
     if not db.enabled():
         raise HTTPException(503, "Reporting is not enabled (database not configured).")
-    if not await db.insert_scam_report(body.kind, body.value, body.description):
+    user = await auth.current_user(request)
+    if auth.login_required_for_reports() and not user:
+        raise HTTPException(401, "Please sign in to submit a report. Signing in keeps false and spam reports out.")
+    who = auth.client_id(request, user)
+    if not auth.rate_ok(who):
+        raise HTTPException(429, "Too many reports from you in the last hour. Please try again later.")
+    if not await db.insert_scam_report(body.kind, body.value, body.description, "user", who):
         raise HTTPException(502, "Could not save the report. Try again.")
     return {"saved": True, "message": "Thanks. Your report is stored as unverified."}
+
+
+@app.get("/my-history")
+async def my_history(request: Request):
+    user = await auth.current_user(request)
+    if not user:
+        raise HTTPException(401, "Sign in to see your past checks.")
+    try:
+        rows = await db.list_reports(20, user["id"])
+    except Exception:  # noqa: BLE001
+        raise HTTPException(502, "Could not load your history. Has supabase_update.sql been run?")
+    return {"email": user["email"], "items": rows or []}
 
 
 @app.get("/benchmark")

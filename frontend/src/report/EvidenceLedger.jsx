@@ -4,6 +4,7 @@ import HighlightedText from "./HighlightedText.jsx";
 import Explain from "./Explain.jsx";
 import Drafts from "./Drafts.jsx";
 import Checklist from "./Checklist.jsx";
+import VerifyLinks from "./VerifyLinks.jsx";
 
 const NAMES = {
   url_reputation: "URL reputation", company_identity: "Company exists in dataset", email_domain_consistency: "Recruiter email domain",
@@ -33,6 +34,7 @@ export default function EvidenceLedger({ r }) {
       </section>
 
       <Checklist items={r.checklist} />
+      <VerifyLinks fields={f} />
       <Drafts items={r.drafts} />
 
       <section>
